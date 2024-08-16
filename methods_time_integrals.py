@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+import matplotlib.pyplot as plt
 
 def quadratic_friction(C, H=3114, Cd=0.003, R=None):
     """
@@ -82,3 +83,115 @@ def integrate(c, dt, C0, friction=None, Cd=None, R=None):
         C[i + 1] = C[i] + dt * fi
         
     return C
+
+
+def find_Cdnod(ts, Cd):
+    L = ts.L_area
+    ub2 = ts.ub2circ_area.values/L
+    u = ts.ucirc_area.values/L 
+    
+    return Cd*ub2/(u*np.abs(u))
+
+
+def find_Rnod(ts, Cd):
+    L = ts.L_area
+    ub2 = ts.ub2circ_area.values/L
+    u = ts.ucirc_area.values/L
+    
+    return Cd*ub2/u
+
+
+
+def plot_integrals(ts, dt=60*60*24, friction="quadratic", adjustDc = True, staticDc = True, dynamicDc = False, adjustR = False, R=5e-4, Cd = 0.003):
+    color_wind = "cornflowerblue"
+    color_nonlin = "darkorange"
+    
+    L = ts.L_area
+    t = ts.ocean_time
+
+    tau = ts.taucirc_area.values/L#(L*H*rho)
+    nonlin = tau + ts.zflux_area.values/L
+    u = ts.ucirc_area.values/L
+    u0 = u[0]
+    
+    info = {}
+
+    fig, ax = plt.subplots(figsize=(12,8))
+    ax.plot(t, u, color="black", label="simulations")
+    
+    ax.plot((np.nan), (np.nan), color=color_wind, label = "surface forcing")
+    ax.plot((np.nan), (np.nan),color=color_nonlin, label = "surface forcing + vorticity flux")
+    
+    ax.set_xlabel("Time [year]")
+    ax.set_ylabel("Normalized circulation [m s-1]")
+    
+    if friction == "linear" and not adjustR:
+        uwind = integrate(tau, dt, u0, friction=friction, R=R)
+        unonlin = integrate(nonlin, dt, u0, friction=friction, R=R)
+        
+        ax.plot(t, uwind, color=color_wind, lw=1)
+        ax.plot(t, unonlin, color=color_nonlin, lw=1)
+        
+        ax.legend()
+        
+        info["r"] = np.corrcoef(unonlin, u)[0,1]
+        
+        return fig, ax, info
+    
+    if friction == "linear":
+        Rnod = find_Rnod(ts, Cd)
+    
+        uwind = integrate(tau, dt, u0, friction=friction, R=np.nanmean(Rnod))
+        unonlin = integrate(nonlin, dt, u0, friction=friction, R=np.nanmean(Rnod))
+        
+        ax.plot(t, uwind, color=color_wind, lw=1)
+        ax.plot(t, unonlin, color=color_nonlin, lw=1)
+        
+        ax.legend()
+        
+        info["Rnod"] = np.nanmean(Rnod)
+        info["r"] = np.corrcoef(unonlin, u)[0,1]
+        
+        return fig, ax, info
+    
+    
+    if not adjustDc: 
+        uwind = integrate(tau, dt, u0, friction=friction)
+        unonlin = integrate(nonlin, dt, u0, friction=friction)
+        
+        ax.plot(t, uwind, color=color_wind, lw=1)
+        ax.plot(t, unonlin, color=color_nonlin, lw=1)
+        
+        ax.legend()
+        
+        info["r"] = np.corrcoef(unonlin, u)[0,1]
+        
+        return fig, ax, info
+    
+    
+    Cdnod = find_Cdnod(ts, Cd)
+     
+    ls_dyn = "solid"
+
+    if staticDc:
+        uwind_statCd = integrate(tau, dt, u0, friction=friction, Cd=np.nanmean(Cdnod))
+        unonlin_statCd = integrate(nonlin, dt, u0, friction=friction, Cd=np.nanmean(Cdnod))
+        
+        ax.plot(t, uwind_statCd, color=color_wind, lw=1)
+        ax.plot(t, unonlin_statCd, color=color_nonlin, lw=1)
+        
+        ls_dyn = "dashed"
+
+    if dynamicDc:
+        uwind_dynCd = integrate(tau, dt, u0, friction=friction, Cd=Cdnod)
+        unonlin_dynCd = integrate(nonlin, dt, u0, friction=friction, Cd=Cdnod)
+        
+        ax.plot(t, uwind_dynCd, color=color_wind, lw=1, ls=ls_dyn)
+        ax.plot(t, unonlin_dynCd, color=color_nonlin, lw=1, ls=ls_dyn)
+        
+    info["Cdnod"] = np.nanmean(Cdnod)
+    info["r"] = np.corrcoef(unonlin_statCd, u)[0,1]
+    
+    ax.legend()
+    
+    return fig, ax, info
