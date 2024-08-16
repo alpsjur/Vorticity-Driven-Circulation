@@ -149,7 +149,7 @@ def plot_integrals(ts, dt=60*60*24, friction="quadratic", adjustDc = True, stati
         
         ax.legend()
         
-        info["Rnod"] = R=np.nanmean(Rnod)
+        info["Rnod"] = np.nanmean(Rnod)
         info["r"] = np.corrcoef(unonlin, u)[0,1]
         
         return fig, ax, info
@@ -189,7 +189,7 @@ def plot_integrals(ts, dt=60*60*24, friction="quadratic", adjustDc = True, stati
         ax.plot(t, uwind_dynCd, color=color_wind, lw=1, ls=ls_dyn)
         ax.plot(t, unonlin_dynCd, color=color_nonlin, lw=1, ls=ls_dyn)
         
-    info["Cdnod"] = R=np.nanmean(Cdnod)
+    info["Cdnod"] = np.nanmean(Cdnod)
     info["r"] = np.corrcoef(unonlin_statCd, u)[0,1]
     
     ax.legend()
