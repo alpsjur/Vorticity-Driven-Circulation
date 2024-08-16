@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+import matplotlib.pyplot as plt
 
 def quadratic_friction(C, H=3114, Cd=0.003, R=None):
     """
@@ -82,3 +83,85 @@ def integrate(c, dt, C0, friction=None, Cd=None, R=None):
         C[i + 1] = C[i] + dt * fi
         
     return C
+
+
+def find_Cdnod(ts, Cd):
+    L = ts.L_area
+    ub2 = ts.ub2circ_area.values/L
+    u = ts.ucirc_area.values/L 
+    
+    return Cd*ub2/(u*np.abs(u))
+
+
+
+def plot_integrals(ts, dt=60*60*24, friciton="quadratic", adjustDc = True, staticDc = True, dynamicDc = False, R=5e-4):
+    color_wind = "cornflowerblue"
+    color_nonlin = "darkorange"
+    
+    L = ts.L_area
+    t = ts.ocean_time
+
+    
+
+    tau = ts.taucirc_area.values/L#(L*H*rho)
+    nonlin = tau + ts.zflux_area.values/L
+    u = ts.ucirc_area.values/L
+    u0 = u[0]
+
+    fig, ax = plt.subplots(figsize=(12,8))
+    ax.plot(t, u, color="black", label="simulations")
+    
+    ax.plot((np.nan), (np.nan), color=color_wind, label = "surface forcing")
+    ax.plot((np.nan), (np.nan),color=color_nonlin, label = "surface forcing + vorticity flux")
+    
+    ax.set_xlabel("Time [year]")
+    ax.set_ylabel("Normalized circulation [m s-1]")
+    
+    if friciton == "linear":
+        uwind = integrate(tau, dt, u0, friction=friciton, R=R)
+        unonlin = integrate(nonlin, dt, u0, friction=friciton, R=R)
+        
+        ax.plot(t, uwind, color=color_wind, lw=1)
+        ax.plot(t, unonlin, color=color_nonlin, lw=1)
+        
+        ax.legend()
+        
+        return fig, ax
+    
+    if not adjustDc: 
+        uwind = integrate(tau, dt, u0, friction=friciton)
+        unonlin = integrate(nonlin, dt, u0, friction=friciton)
+        
+        ax.plot(t, uwind, color=color_wind, lw=1)
+        ax.plot(t, unonlin, color=color_nonlin, lw=1)
+        
+        ax.legend()
+        
+        return fig, ax
+    
+    
+    Cd = find_Cdnod(ts, 0.003)
+     
+    ls_dyn = "solid"
+
+    if staticDc:
+        uwind_statCd = integrate(tau, dt, u0, friction=friciton, Cd=np.nanmean(Cd))
+        unonlin_statCd = integrate(nonlin, dt, u0, friction=friciton, Cd=np.nanmean(Cd))
+        
+        ax.plot(t, uwind_statCd, color=color_wind, lw=1)
+        ax.plot(t, unonlin_statCd, color=color_nonlin, lw=1)
+        
+        ls_dyn = "dashed"
+
+    if dynamicDc:
+        uwind_dynCd = integrate(tau, dt, u0, friction=friciton, Cd=Cd)
+        unonlin_dynCd = integrate(nonlin, dt, u0, friction=friciton, Cd=Cd)
+        
+        ax.plot(t, uwind_dynCd, color=color_wind, lw=1, ls=ls_dyn)
+        ax.plot(t, unonlin_dynCd, color=color_nonlin, lw=1, ls=ls_dyn)
+        
+    
+    
+    ax.legend()
+    
+    return fig, ax
