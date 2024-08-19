@@ -86,17 +86,17 @@ def integrate(c, dt, C0, friction=None, Cd=None, R=None):
 
 
 def find_Cdnod(ts, Cd):
-    L = ts.L_area
-    ub2 = ts.ub2circ_area.values/L
-    u = ts.ucirc_area.values/L 
+    L = ts.L.values
+    ub2 = ts.ub2circ.values/L
+    u = ts.ucirc.values/L 
     
     return Cd*ub2/(u*np.abs(u))
 
 
 def find_Rnod(ts, Cd):
-    L = ts.L_area
-    ub2 = ts.ub2circ_area.values/L
-    u = ts.ucirc_area.values/L
+    L = ts.L.values
+    ub2 = ts.ub2circ.values/L
+    u = ts.ucirc.values/L
     
     return Cd*ub2/u
 
@@ -106,12 +106,12 @@ def plot_integrals(ts, dt=60*60*24, friction="quadratic", adjustDc = True, stati
     color_wind = "cornflowerblue"
     color_nonlin = "darkorange"
     
-    L = ts.L_area
+    L = ts.L.values
     t = ts.ocean_time
 
-    tau = ts.taucirc_area.values/L#(L*H*rho)
-    nonlin = tau + ts.zflux_area.values/L
-    u = ts.ucirc_area.values/L
+    tau = ts.taucirc.values/L#(L*H*rho)
+    nonlin = tau + ts.zflux.values/L
+    u = ts.ucirc.values/L
     u0 = u[0]
     
     info = {}
