@@ -4,7 +4,7 @@ import numpy as np
 from methods_time_integrals import find_Rnod, integrate
 
 # Define the data path where datasets are stored
-datapath = "data/"
+datapath = "../data/"
 
 # Time step for integration in seconds (1 day)
 dt = 60 * 60 * 24
@@ -78,4 +78,4 @@ ds_out = xr.Dataset(
 )
 
 # Save the resulting dataset to a NetCDF file
-ds_out.to_netcdf(datapath + "lofoten800_lofoten_h_50km_time_integrals.nc")
+ds_out.to_netcdf(datapath + "lofoten800/lofoten800_lofoten_h_50km_time_integrals.nc")
