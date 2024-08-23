@@ -86,7 +86,7 @@ def integrate(c, dt, C0, friction=None, Cd=None, R=None):
 
 
 def find_Cdnod(ts, Cd):
-    L = ts.L_area
+    L = ts.L_line
     ub2 = ts.ub2circ_area.values/L
     u = ts.ucirc_area.values/L 
     
@@ -94,9 +94,8 @@ def find_Cdnod(ts, Cd):
 
 
 def find_Rnod(ts, Cd):
-    L = ts.L_area
-    ub2 = ts.ub2circ_area.values/L
-    u = ts.ucirc_area.values/L
+    ub2 = ts.ub2circ_area.values
+    u = ts.ucirc_area.values
     
     return Cd*ub2/u
 
@@ -110,7 +109,7 @@ def plot_integrals(ts, dt=60*60*24, friction="quadratic", adjustDc = True, stati
     t = ts.ocean_time
 
     tau = ts.taucirc_area.values/L#(L*H*rho)
-    nonlin = tau + ts.zflux_area.values/L + ts.fflux_area.values/L
+    nonlin = tau + ts.zflux_area.values/L #+ ts.fflux_area.values/L
     u = ts.ucirc_area.values/L
     u0 = u[0]
     
