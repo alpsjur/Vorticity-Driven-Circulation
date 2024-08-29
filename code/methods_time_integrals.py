@@ -28,6 +28,91 @@ def linear_friction(C, H=3114, Cd = None, R=5e-4):
     """
     return R * C / H 
 
+def create_Ab(c, C0, R, H, dt):
+    """
+    Creates matrices A and b for a system based on the time derivative of circulation data,
+    a linear friction parameter, and time intervals.
+
+    Parameters:
+    c (array-like): Input array containing the time derivative of circulation (may contain NaNs).
+    C0 (float): Initial circulation value.
+    R (float): Linear friction parameter.
+    H (float): Depth parameter.
+    dt (float): Time interval between measurements.
+
+    Returns:
+    tuple: A tuple containing:
+        - A (ndarray): Matrix representing the system's filtering model affected by linear friction.
+        - b (ndarray): Vector representing the decaying contribution of the initial circulaiton.
+        - valid_indices (ndarray): Boolean array indicating valid (non-NaN) entries in c.
+    """
+    # Identify indices where c is not NaN
+    valid_indices = ~np.isnan(c)
+    c_valid = c[valid_indices]  # Time derivative of circulation excluding NaNs
+    n = len(c_valid)  # Number of valid entries
+
+    # Adjust dt based on the number of consecutive NaNs
+    adjusted_dt = np.zeros_like(c)
+    dt_counter = 0
+
+    for i in range(len(c)):
+        if np.isnan(c[i]):
+            dt_counter += 1  # Count consecutive NaNs
+        else:
+            adjusted_dt[i] = dt * (dt_counter + 1)  # Adjust dt for valid entries
+            dt_counter = 0  # Reset counter after encountering a valid entry
+
+    # Remove NaNs from adjusted_dt
+    adjusted_dt = adjusted_dt[valid_indices]
+
+    # Construct vector b 
+    decay_factors = np.exp(-R * adjusted_dt / H)
+    cumulative_decay = np.cumprod(np.ones(n) * decay_factors) / decay_factors
+    b = cumulative_decay * C0
+
+    # Construct matrix A 
+    A = np.ones((n, n)) * decay_factors
+    A = np.triu(A)  # Upper triangular part filled with decay factors
+    np.fill_diagonal(A, 1)  # Set diagonal to 1
+
+    # Update matrix A to reflect filtering effect
+    for i in range(n):
+        A[i, i:] = np.cumprod(A[i, i:]) * adjusted_dt[i]
+
+    # Correct the first entry of A to ensure it is initialized properly
+    A[0, 0] *= 0 
+
+    return A, b, valid_indices
+
+def integrating_factor(c, dt, C0, R, H):
+    """
+    Computes the circulation values using the integrating factor method.
+
+    Parameters:
+    c (array-like): Input array containing the time derivative of circulation (may contain NaNs).
+    dt (float): Time interval between measurements.
+    C0 (float): Initial circulation value.
+    R (float): Linear friction parameter.
+    H (float): A parameter related to the system (e.g., volume or mass).
+
+    Returns:
+    ndarray: An array representing the computed circulation values, with NaNs preserved
+             where the input array `c` had NaNs.
+    """
+    # Generate the matrix A and vector b using the create_Ab function
+    A, b, valid_indices = create_Ab(c, C0, R, H, dt)
+    
+    # Initialize the output array C with NaN values
+    C = np.full_like(c, np.nan)  
+
+    # Extract valid entries of c (where c is not NaN)
+    c_valid = c[valid_indices]
+
+    # Compute circulation values for valid entries using matrix multiplication
+    C[valid_indices] = np.matmul(c_valid, A) + b
+
+    return C
+
 
 def integrate(c, dt, C0, friction=None, Cd=None, R=None):
     """
