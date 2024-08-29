@@ -4,7 +4,7 @@ import numpy as np
 from methods_time_integrals import find_Rnod, integrate
 
 # Define the data path where datasets are stored
-datapath = "../data/"
+datapath = "data/"
 
 # Time step for integration in seconds (1 day)
 dt = 60 * 60 * 24
@@ -48,6 +48,9 @@ f_ini = np.zeros_like(f_wind)
 
 # Calculate the Rnod value using a custom function
 R = np.nanmean(find_Rnod(ts_L800, Cd))
+s = np.nanstd(find_Rnod(ts_L800, Cd))
+
+#R = R-s
 
 # Integrate each forcing term over time
 C_ini = integrate(f_ini, dt, C0, friction="linear", R=R)
